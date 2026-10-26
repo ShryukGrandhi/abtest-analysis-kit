@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abkit"
+version = "0.1.0"
+description = "A/B test analysis: data validation, SRM checks, delta-method and CUPED estimators, Poisson bootstrap, mSPRT sequential tests"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+abkit = "abkit.cli:main"
+
+[tool.setuptools]
+packages = ["abkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
