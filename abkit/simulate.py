@@ -6,11 +6,14 @@ measure false positive rate, power and CI coverage of every estimator.
 Per user the model is
 
     sessions_pre  ~ Poisson(lambda_u),  sessions_post ~ Poisson(lambda_u)
-    lambda_u      ~ Gamma(shape, mean / shape)       (heterogeneous users)
-    revenue       = sum over sessions of LogNormal spend * convert(p)
+    lambda_u      ~ Gamma(shape, mean / shape)       (heterogeneous activity)
+    p_u           ~ Beta with mean convert_p          (heterogeneous propensity)
+    orders        ~ Binomial(sessions, p_u * lift[variant])
+    revenue       = sum of orders x LogNormal(spend_mu + s_u, spend_sigma)
 
-so pre and post metrics are correlated through lambda_u, which is what CUPED
-exploits, and revenue is zero-inflated and right-skewed like real revenue.
+so pre and post metrics are correlated through the user-level lambda_u, p_u
+and s_u, which is what CUPED exploits, and revenue is zero-inflated and
+right-skewed like real revenue.
 """
 
 import csv
@@ -28,8 +31,10 @@ class SimConfig:
     session_mean: float = 3.0
     session_shape: float = 2.0
     convert_p: float = 0.08
+    convert_concentration: float = 2.0       # Beta a+b; lower = more spread
     spend_mu: float = 3.0                    # log-scale mean of order value
-    spend_sigma: float = 0.8
+    spend_user_sd: float = 0.5               # per-user shift of log order value
+    spend_sigma: float = 0.6
     # multiplicative effect on conversion probability per variant (1.0 = none)
     conversion_lift: Optional[Dict[str, float]] = None
 
@@ -41,6 +46,9 @@ def simulate_users(cfg: SimConfig, rng: np.random.Generator):
     w = w / w.sum()
     codes = rng.choice(k, size=cfg.n_users, p=w)
     lam = rng.gamma(cfg.session_shape, cfg.session_mean / cfg.session_shape, cfg.n_users)
+    a = cfg.convert_p * cfg.convert_concentration
+    p_user = rng.beta(a, cfg.convert_concentration - a, cfg.n_users)
+    spend_shift = rng.normal(0.0, cfg.spend_user_sd, cfg.n_users)
     lift = np.ones(k)
     if cfg.conversion_lift:
         for name, m in cfg.conversion_lift.items():
@@ -48,11 +56,11 @@ def simulate_users(cfg: SimConfig, rng: np.random.Generator):
     out = {"variant": codes}
     for period, mult in (("pre", np.ones(k)), ("post", lift)):
         sessions = rng.poisson(lam)
-        p = np.clip(cfg.convert_p * mult[codes], 0, 1)
+        p = np.clip(p_user * mult[codes], 0, 1)
         orders = rng.binomial(sessions, p)
         # Sum of `orders` lognormal draws per user, vectorised via repeat + bincount.
         owner = np.repeat(np.arange(cfg.n_users), orders)
-        spend = rng.lognormal(cfg.spend_mu, cfg.spend_sigma, owner.size)
+        spend = rng.lognormal(cfg.spend_mu + spend_shift[owner], cfg.spend_sigma)
         revenue = np.bincount(owner, weights=spend, minlength=cfg.n_users)
         out[f"sessions_{period}"] = sessions.astype(float)
         out[f"orders_{period}"] = orders.astype(float)
