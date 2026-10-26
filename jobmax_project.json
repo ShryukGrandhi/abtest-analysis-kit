@@ -1,0 +1,17 @@
+{
+  "name": "abtest-analysis-kit",
+  "language": "Python",
+  "tech": ["Python", "NumPy", "A/B testing", "statistical analysis", "Monte Carlo simulation", "GitHub Actions"],
+  "targets": ["data analysis", "statistical hypothesis testing", "data validation and cleaning", "metrics and experimentation", "automated testing and CI"],
+  "bullets": [
+    "Built a Python/NumPy A/B test data analysis toolkit: event-log validation, SRM checks, delta-method and CUPED estimators, Poisson bootstrap, BH/Holm corrections",
+    "Implemented mSPRT sequential tests; across 2,000 simulated A/A tests with 20 peeks, false positives fell from 26.1% (naive z-test) to 1.1%",
+    "Raised power on a +10% conversion lift from 83.0% to 95.9% with CUPED (36% variance cut); pipeline aggregates 1.27M event rows/s, verified by Monte Carlo benchmark in CI"
+  ],
+  "summary": {
+    "what": "A Python library and CLI that turns raw A/B test event logs into a trustworthy experiment readout: data-quality accounting, sample ratio mismatch check, per-metric lift with confidence intervals, CUPED variance reduction, ratio metrics, multiple-testing correction and always-valid sequential p-values.",
+    "how": "NumPy-only implementation with hand-written normal and chi-square (incomplete gamma) functions; per-user aggregation via np.add.at; delta-method variances for relative lift and ratio metrics; a simulator with known ground truth drives a Monte Carlo benchmark measuring false positive rate, power, CI coverage and throughput, run on every push in GitHub Actions.",
+    "hardest": "Making the statistics provably right rather than plausible: each estimator is validated against simulation (delta-method SEs vs empirical spread, CUPED reduction vs 1-rho^2, mSPRT Type I error under peeking), and the simulator needed realistic per-user heterogeneity before CUPED behaved like it does on real data.",
+    "say": "I built an A/B testing analysis toolkit that goes from raw event logs to a decision, including the checks that catch broken experiments like sample ratio mismatch. I benchmarked every method on thousands of simulated experiments with a known answer, for example showing that peeking at a fixed-horizon z-test 20 times gives a 26% false positive rate while the sequential test I implemented keeps it near 1%. CUPED using pre-experiment data raised power from 83% to 96% at the same sample size."
+  }
+}
