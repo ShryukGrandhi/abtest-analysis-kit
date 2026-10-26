@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Tests
+        run: python -m pytest -q
+      - name: CLI smoke test
+        run: |
+          abkit simulate /tmp/events.csv --users 5000 --lift treatment=1.1 --dirty 0.01
+          abkit analyze /tmp/events.csv --control control --ratio revenue/sessions
+      - name: Benchmark (quick)
+        run: python bench/benchmark.py --quick --out /tmp/bench.json
